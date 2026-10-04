@@ -58,6 +58,34 @@
       "schemaId": "5650362e-5d00-4d27-9b50-505ff331ba65"
     },
     {
+      "accessLevel": 2,
+      "fieldNames": [],
+      "operation": 0,
+      "policyType": 0,
+      "schemaId": "c8d4a32a-9688-4b69-a7ec-a3c58bdef832"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 1,
+      "policyType": 0,
+      "schemaId": "c8d4a32a-9688-4b69-a7ec-a3c58bdef832"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 2,
+      "policyType": 0,
+      "schemaId": "c8d4a32a-9688-4b69-a7ec-a3c58bdef832"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 3,
+      "policyType": 0,
+      "schemaId": "c8d4a32a-9688-4b69-a7ec-a3c58bdef832"
+    },
+    {
       "accessLevel": 1,
       "fieldNames": [],
       "operation": 0,
@@ -112,6 +140,34 @@
       "operation": 3,
       "policyType": 0,
       "schemaId": "2ef1bfdf-9551-4c36-bfe7-c30ba85fe7d3"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 0,
+      "policyType": 0,
+      "schemaId": "7c5144b4-c26f-4367-8b32-fa97d8933196"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 1,
+      "policyType": 0,
+      "schemaId": "7c5144b4-c26f-4367-8b32-fa97d8933196"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 2,
+      "policyType": 0,
+      "schemaId": "7c5144b4-c26f-4367-8b32-fa97d8933196"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 3,
+      "policyType": 0,
+      "schemaId": "7c5144b4-c26f-4367-8b32-fa97d8933196"
     }
   ]
 }

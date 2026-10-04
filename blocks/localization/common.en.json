@@ -11,6 +11,7 @@
   "delete": "Delete",
   "error": "Something went wrong",
   "loading": "Loading",
+  "nav.admin": "Operations",
   "nav.logout": "Log out",
   "nav.orders": "My orders",
   "nav.profile": "Profile",

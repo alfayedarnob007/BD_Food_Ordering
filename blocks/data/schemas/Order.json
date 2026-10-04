@@ -29,7 +29,7 @@
       "isArray": false,
       "isPIIData": false,
       "isUniqueData": false,
-      "description": "placed|accepted|preparing|out_for_delivery|delivered|cancelled",
+      "description": "placed|accepted|preparing|ready|out_for_delivery|delivered|cancelled",
       "requiredOn": "None",
       "fields": [],
       "validationRule": null
@@ -110,6 +110,54 @@
       "requiredOn": "None",
       "fields": [],
       "validationRule": null
+    },
+    {
+      "name": "branchId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Branch.ItemId"
+    },
+    {
+      "name": "channel",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "kiosk|webapp|website"
+    },
+    {
+      "name": "placedAt",
+      "type": "DateTime",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "acceptedAt",
+      "type": "DateTime",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "readyAt",
+      "type": "DateTime",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "deliveredAt",
+      "type": "DateTime",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
     }
   ],
   "schemaName": "Order",

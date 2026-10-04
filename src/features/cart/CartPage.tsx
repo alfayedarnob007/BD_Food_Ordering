@@ -29,7 +29,7 @@ export function CartPage({ onNavigate }: PageProps) {
     mutationFn: () => {
       if (!customerId || !cart.restaurantId) throw new Error("Your profile is still loading. Try again in a moment.");
       return placeOrder(
-        { customerId, deliveryAddress: address.trim(), deliveryFee: DELIVERY_FEE_BDT, notes: notes.trim(), paymentMethod, phone: phone.trim(), restaurantId: cart.restaurantId, status: "placed", subtotal, total },
+        { branchId: cart.branchId, channel: "webapp", customerId, deliveryAddress: address.trim(), deliveryFee: DELIVERY_FEE_BDT, notes: notes.trim(), paymentMethod, phone: phone.trim(), placedAt: new Date().toISOString(), restaurantId: cart.restaurantId, status: "placed", subtotal, total },
         cart.lines.map((line) => ({ menuItemId: line.menuItemId, name: line.name, quantity: line.quantity, unitPrice: line.price }))
       );
     },
@@ -61,7 +61,7 @@ export function CartPage({ onNavigate }: PageProps) {
 
   return (
     <section>
-      <PageHeader title="Your cart" subtitle={`From ${cart.restaurantName ?? "your restaurant"}`} />
+      <PageHeader title="Your cart" subtitle={`From ${cart.restaurantName ?? "your restaurant"}${cart.branchName ? ` \u00B7 ${cart.branchName}` : ""}`} />
 
       <div className="panel cart-lines">
         {cart.lines.map((line) => (

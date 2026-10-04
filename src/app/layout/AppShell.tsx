@@ -2,6 +2,7 @@ import { Activity, PanelLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { CartButton } from "./CartButton";
+import { useStaff } from "../../features/admin/useStaff";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { navItems } from "./navItems";
 import { NotificationsMenu } from "./NotificationsMenu";
@@ -28,11 +29,14 @@ export function AppShell({ activePath, children, onNavigate }: { activePath: str
   const isMobile = useIsMobile();
   const [collapsedPref, setCollapsedPref] = useState(() => localStorage.getItem(COLLAPSED_KEY) === "true");
   const { t } = useT();
+  const { assignment } = useStaff();
+  // Staff-only entries stay hidden for customers; the page itself still gates access.
+  const visibleNav = navItems.filter((item) => !item.staffOnly || assignment || activePath === item.href);
   // On narrow screens the sidebar is always the icon-only rail below --
   // no separate hamburger/drawer/scrim needed, and no dead-end state where
   // nothing on screen can bring navigation back.
   const collapsed = collapsedPref || isMobile;
-  const activeItem = navItems.find((item) => item.href === activePath);
+  const activeItem = visibleNav.find((item) => item.href === activePath);
 
   useEffect(() => {
     localStorage.setItem(COLLAPSED_KEY, String(collapsedPref));
@@ -56,7 +60,7 @@ export function AppShell({ activePath, children, onNavigate }: { activePath: str
           </button>
         </div>
         <nav>
-          {navItems.map((item) => (
+          {visibleNav.map((item) => (
             <a
               key={item.href}
               href={item.href}

@@ -3,6 +3,7 @@ export const defaultDictionary = {
   "nav.profile": "Profile",
   "nav.restaurants": "Restaurants",
   "nav.orders": "My orders",
+  "nav.admin": "Operations",
   "nav.logout": "Log out",
   "auth.welcome": "Welcome back",
   "auth.subtitle": "Sign in with your Blocks account to continue.",

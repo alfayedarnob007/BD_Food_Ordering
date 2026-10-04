@@ -1,7 +1,8 @@
-import { ReceiptText, Store, UserRound } from "lucide-react";
+import { LayoutDashboard, ReceiptText, Store, UserRound } from "lucide-react";
 
 export const navItems = [
-  { href: "/", labelKey: "nav.restaurants", icon: Store },
-  { href: "/orders", labelKey: "nav.orders", icon: ReceiptText },
-  { href: "/profile", labelKey: "nav.profile", icon: UserRound }
+  { href: "/", labelKey: "nav.restaurants", icon: Store, staffOnly: false },
+  { href: "/orders", labelKey: "nav.orders", icon: ReceiptText, staffOnly: false },
+  { href: "/admin", labelKey: "nav.admin", icon: LayoutDashboard, staffOnly: true },
+  { href: "/profile", labelKey: "nav.profile", icon: UserRound, staffOnly: false }
 ] as const;

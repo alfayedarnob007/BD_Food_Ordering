@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { ArrowLeft, Clock, MapPin, Phone, Plus, ShoppingCart } from "lucide-react";
 import { useCart } from "../cart/CartProvider";
 import { ActionButton } from "../../shared/ui/ActionButton";
@@ -6,7 +7,7 @@ import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { Skeleton } from "../../shared/ui/Skeleton";
-import { formatBdt, listMenuItems, listRestaurants } from "../food/api";
+import { formatBdt, listBranches, listMenuItems, listRestaurants } from "../food/api";
 import type { MenuItem } from "../food/api";
 import type { PageProps } from "../../app/router/routes";
 
@@ -18,6 +19,9 @@ export function RestaurantMenuPage({ onNavigate, path }: PageProps) {
   const restaurants = useQuery({ queryFn: listRestaurants, queryKey: ["restaurants"] });
   const menu = useQuery({ queryFn: () => listMenuItems(restaurantId), queryKey: ["menu", restaurantId] });
   const restaurant = restaurants.data?.find((entry) => entry.ItemId === restaurantId);
+  const branchList = useQuery({ queryFn: () => listBranches(restaurantId), queryKey: ["branches", restaurantId] });
+  const [chosenBranch, setChosenBranch] = useState("");
+  const branch = branchList.data?.find((entry) => entry.ItemId === chosenBranch) ?? branchList.data?.[0];
 
   const available = (menu.data ?? []).filter((item) => item.isAvailable !== false);
   const byCategory = available.reduce<Record<string, MenuItem[]>>((groups, item) => {
@@ -42,6 +46,15 @@ export function RestaurantMenuPage({ onNavigate, path }: PageProps) {
         </div>
       ) : null}
 
+      {branchList.data && branchList.data.length > 1 ? (
+        <label className="form-field branch-picker">
+          <span>Order from branch</span>
+          <select value={branch?.ItemId ?? ""} onChange={(event) => setChosenBranch(event.target.value)}>
+            {branchList.data.map((entry) => <option key={entry.ItemId} value={entry.ItemId}>{entry.name}{entry.city ? ` \u00B7 ${entry.city}` : ""}</option>)}
+          </select>
+        </label>
+      ) : null}
+
       {menu.isError ? <ErrorState message="Could not load the menu." onRetry={() => menu.refetch()} /> : null}
       {menu.isLoading ? <div className="panel"><Skeleton className="skeleton-line-lg" /><Skeleton className="skeleton-line" /></div> : null}
       {menu.isSuccess && available.length === 0 ? <EmptyState title="Menu is empty" description="This restaurant has no available items right now." /> : null}
@@ -59,7 +72,7 @@ export function RestaurantMenuPage({ onNavigate, path }: PageProps) {
                 <div className="menu-row-actions">
                   <strong className="mono">{formatBdt(item.price)}</strong>
                   <ActionButton
-                    onClick={() => add({ id: restaurantId, name: restaurant?.name ?? "Restaurant" }, { menuItemId: item.ItemId, name: item.name, price: item.price })}
+                    onClick={() => add({ branchId: branch?.ItemId, branchName: branch?.name, id: restaurantId, name: restaurant?.name ?? "Restaurant" }, { menuItemId: item.ItemId, name: item.name, price: item.price })}
                     icon={<Plus size={16} />}
                   >
                     Add

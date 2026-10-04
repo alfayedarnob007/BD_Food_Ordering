@@ -16,6 +16,22 @@ export type Restaurant = {
   phone?: string;
 };
 
+export type Branch = {
+  ItemId: string;
+  address?: string;
+  area?: string;
+  city?: string;
+  isActive?: boolean;
+  name: string;
+  openingHours?: string;
+  phone?: string;
+  restaurantId: string;
+  timezone?: string;
+};
+
+export const CHANNELS = ["kiosk", "webapp", "website"] as const;
+export type Channel = (typeof CHANNELS)[number];
+
 export type MenuItem = {
   ItemId: string;
   category?: string;
@@ -27,14 +43,20 @@ export type MenuItem = {
   restaurantId: string;
 };
 
-export const ORDER_STATUSES = ["placed", "accepted", "preparing", "out_for_delivery", "delivered", "cancelled"] as const;
+export const ORDER_STATUSES = ["placed", "accepted", "preparing", "ready", "out_for_delivery", "delivered", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export const PAYMENT_METHODS = ["cod", "bkash", "nagad"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export type Order = {
   ItemId: string;
+  acceptedAt?: string;
+  branchId?: string;
+  channel?: Channel;
   customerId: string;
+  deliveredAt?: string;
+  placedAt?: string;
+  readyAt?: string;
   deliveryAddress?: string;
   deliveryFee: number;
   notes?: string;
@@ -55,6 +77,18 @@ export type OrderItem = {
   unitPrice: number;
 };
 
+export const STAFF_ROLES = ["restaurant-admin", "branch-manager", "kitchen-staff"] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
+
+export type StaffAssignment = {
+  ItemId: string;
+  branchId?: string;
+  email?: string;
+  restaurantId: string;
+  role: StaffRole;
+  userId: string;
+};
+
 export type NewOrder = Omit<Order, "ItemId">;
 export type NewOrderItem = Omit<OrderItem, "ItemId" | "orderId">;
 
@@ -63,11 +97,17 @@ export const DELIVERY_FEE_BDT = 60;
 const restaurants = blocksClient.data.collection<Restaurant>("Restaurant", {
   fields: ["name", "description", "address", "area", "city", "phone", "cuisines", "imageUrl", "openingHours", "isActive"]
 });
+const branches = blocksClient.data.collection<Branch>("Branch", {
+  fields: ["restaurantId", "name", "address", "area", "city", "phone", "timezone", "openingHours", "isActive"]
+});
+const staff = blocksClient.data.collection<StaffAssignment>("StaffAssignment", {
+  fields: ["userId", "email", "role", "restaurantId", "branchId"]
+});
 const menuItems = blocksClient.data.collection<MenuItem>("MenuItem", {
   fields: ["restaurantId", "name", "description", "price", "category", "imageUrl", "isAvailable"]
 });
 const orders = blocksClient.data.collection<Order>("Order", {
-  fields: ["customerId", "restaurantId", "status", "subtotal", "deliveryFee", "total", "deliveryAddress", "phone", "paymentMethod", "notes"]
+  fields: ["customerId", "restaurantId", "status", "subtotal", "deliveryFee", "total", "deliveryAddress", "phone", "paymentMethod", "notes", "branchId", "channel", "placedAt", "acceptedAt", "readyAt", "deliveredAt"]
 });
 const orderItems = blocksClient.data.collection<OrderItem>("OrderItem", {
   fields: ["orderId", "menuItemId", "name", "unitPrice", "quantity"]
@@ -108,6 +148,42 @@ export async function listRestaurants(): Promise<Restaurant[]> {
   return items.filter((restaurant) => restaurant.isActive !== false);
 }
 
+export async function listBranches(restaurantId: string): Promise<Branch[]> {
+  const items = extractItems<Branch>(await branches.list({ filter: { restaurantId }, pageNo: 1, pageSize: 50 }));
+  return items.filter((branch) => branch.isActive !== false);
+}
+
+// Pages through a collection so portal totals are not silently capped at one page.
+async function listAll<T>(
+  list: (options: { pageNo: number; pageSize: number; filter?: Record<string, unknown> }) => Promise<unknown>,
+  filter?: Record<string, unknown>
+): Promise<T[]> {
+  const pageSize = 500;
+  const all: T[] = [];
+  for (let pageNo = 1; pageNo <= 20; pageNo += 1) {
+    const page = extractItems<T>(await list({ filter, pageNo, pageSize }));
+    all.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return all;
+}
+
+export function listRestaurantOrders(restaurantId: string): Promise<Order[]> {
+  return listAll<Order>((options) => orders.list(options), { restaurantId });
+}
+
+export function listAllOrderItems(): Promise<OrderItem[]> {
+  return listAll<OrderItem>((options) => orderItems.list(options));
+}
+
+export async function listMyAssignments(userId: string): Promise<StaffAssignment[]> {
+  return extractItems<StaffAssignment>(await staff.list({ filter: { userId }, pageNo: 1, pageSize: 20 }));
+}
+
+export async function createAssignment(assignment: Omit<StaffAssignment, "ItemId">): Promise<void> {
+  await staff.create(assignment);
+}
+
 export async function listMenuItems(restaurantId: string): Promise<MenuItem[]> {
   return extractItems<MenuItem>(await menuItems.list({ filter: { restaurantId }, pageNo: 1, pageSize: 200 }));
 }
@@ -132,10 +208,15 @@ export async function placeOrder(order: NewOrder, lines: NewOrderItem[]): Promis
   return orderId;
 }
 
-type SeedRestaurant = { items: ReadonlyArray<readonly [string, string, number, string]>; restaurant: Omit<Restaurant, "ItemId"> };
+type SeedRestaurant = { branches: ReadonlyArray<readonly [string, string, string, string]>; items: ReadonlyArray<readonly [string, string, number, string]>; restaurant: Omit<Restaurant, "ItemId"> };
 
 const SEED: SeedRestaurant[] = [
   {
+    branches: [
+      ["Dhanmondi", "Road 27, Dhanmondi", "Dhanmondi", "Dhaka"],
+      ["Gulshan", "Gulshan 1 Circle", "Gulshan", "Dhaka"],
+      ["Chattogram - GEC", "GEC Circle", "GEC Circle", "Chattogram"]
+    ],
     restaurant: { name: "Dhaka Biryani House", description: "Slow-cooked kacchi and tehari.", area: "Dhanmondi", city: "Dhaka", address: "Road 27, Dhanmondi, Dhaka", phone: "01700000001", cuisines: ["Bangladeshi", "Biryani"], openingHours: "11:00 - 23:00", isActive: true },
     items: [
       ["Kacchi Biryani", "Biryani", 380, "Mutton kacchi with potato and egg"],
@@ -146,6 +227,10 @@ const SEED: SeedRestaurant[] = [
     ]
   },
   {
+    branches: [
+      ["Gulshan 2", "Gulshan 2", "Gulshan", "Dhaka"],
+      ["Banani", "Road 11, Banani", "Banani", "Dhaka"]
+    ],
     restaurant: { name: "Bhuna Ghor", description: "Home-style Bangladeshi curries.", area: "Gulshan", city: "Dhaka", address: "Gulshan 2, Dhaka", phone: "01700000002", cuisines: ["Bangladeshi", "Curry"], openingHours: "12:00 - 22:00", isActive: true },
     items: [
       ["Beef Bhuna with Paratha", "Mains", 260, "Two parathas and beef bhuna"],
@@ -156,6 +241,10 @@ const SEED: SeedRestaurant[] = [
     ]
   },
   {
+    branches: [
+      ["Agrabad", "Agrabad C/A", "Agrabad", "Chattogram"],
+      ["Nasirabad", "Nasirabad H/S", "Nasirabad", "Chattogram"]
+    ],
     restaurant: { name: "Burger Corner", description: "Burgers, fries and shakes.", area: "Agrabad", city: "Chattogram", address: "Agrabad C/A, Chattogram", phone: "01700000003", cuisines: ["Fast food", "Burgers"], openingHours: "10:00 - 00:00", isActive: true },
     items: [
       ["Classic Beef Burger", "Burgers", 320, "Beef patty, cheese, lettuce"],
@@ -165,6 +254,10 @@ const SEED: SeedRestaurant[] = [
     ]
   },
   {
+    branches: [
+      ["GEC Circle", "GEC Circle", "GEC Circle", "Chattogram"],
+      ["Khulshi", "Khulshi", "Khulshi", "Chattogram"]
+    ],
     restaurant: { name: "Chittagong Mezban", description: "Spicy mezbani beef and Chattogram classics.", area: "GEC Circle", city: "Chattogram", address: "GEC Circle, Chattogram", phone: "01700000004", cuisines: ["Bangladeshi", "Mezban"], openingHours: "12:00 - 22:30", isActive: true },
     items: [
       ["Mezbani Beef with Rice", "Mains", 290, "Peppery beef curry with plain rice"],
@@ -174,6 +267,10 @@ const SEED: SeedRestaurant[] = [
     ]
   },
   {
+    branches: [
+      ["Zindabazar", "Zindabazar", "Zindabazar", "Sylhet"],
+      ["Ambarkhana", "Ambarkhana", "Ambarkhana", "Sylhet"]
+    ],
     restaurant: { name: "Sylhet Seven Rings", description: "Seven-layer tea, shatkora dishes and pitha.", area: "Zindabazar", city: "Sylhet", address: "Zindabazar, Sylhet", phone: "01700000005", cuisines: ["Sylheti", "Tea & snacks"], openingHours: "09:00 - 21:00", isActive: true },
     items: [
       ["Seven-layer Tea", "Drinks", 60, "Famous layered tea"],
@@ -183,6 +280,10 @@ const SEED: SeedRestaurant[] = [
     ]
   },
   {
+    branches: [
+      ["Uttara", "Sector 4, Uttara", "Uttara", "Dhaka"],
+      ["Mirpur", "Mirpur 10", "Mirpur", "Dhaka"]
+    ],
     restaurant: { name: "Pizza & Pasta Co.", description: "Wood-fired pizza and creamy pasta.", area: "Uttara", city: "Dhaka", address: "Sector 4, Uttara, Dhaka", phone: "01700000006", cuisines: ["Italian", "Pizza"], openingHours: "11:00 - 23:30", isActive: true },
     items: [
       ["Margherita Pizza", "Pizza", 450, "Tomato, mozzarella, basil"],
@@ -193,32 +294,38 @@ const SEED: SeedRestaurant[] = [
   }
 ];
 
-type SeededRestaurant = { id: string; items: Array<{ id: string; name: string; price: number }> };
+type SeededRestaurant = { branchIds: string[]; id: string; items: Array<{ id: string; name: string; price: number }> };
 
 async function seedCatalog(): Promise<SeededRestaurant[]> {
   const seeded: SeededRestaurant[] = [];
   for (const sample of SEED) {
     const id = extractId(await restaurants.create({ ...sample.restaurant, cuisines: [...(sample.restaurant.cuisines ?? [])] }));
     if (!id) throw new Error("Could not read back the new restaurant id.");
+    const branchIds: string[] = [];
+    for (const [name, address, area, city] of sample.branches) {
+      const branchId = extractId(await branches.create({ address, area, city, isActive: true, name, openingHours: sample.restaurant.openingHours, phone: sample.restaurant.phone, restaurantId: id, timezone: "Asia/Dhaka" }));
+      if (!branchId) throw new Error("Could not read back the new branch id.");
+      branchIds.push(branchId);
+    }
     const items: SeededRestaurant["items"] = [];
     for (const [name, category, price, description] of sample.items) {
       const itemId = extractId(await menuItems.create({ category, description, isAvailable: true, name, price, restaurantId: id }));
       if (!itemId) throw new Error("Could not read back the new menu item id.");
       items.push({ id: itemId, name, price });
     }
-    seeded.push({ id, items });
+    seeded.push({ branchIds, id, items });
   }
   return seeded;
 }
 
 // Orders across every status so the history page has something to show.
 async function seedOrders(customerId: string, catalog: SeededRestaurant[]): Promise<void> {
-  const plan: Array<{ lines: Array<[number, number]>; payment: PaymentMethod; restaurant: number; status: OrderStatus }> = [
-    { lines: [[0, 1], [3, 2]], payment: "cod", restaurant: 0, status: "delivered" },
-    { lines: [[1, 1], [2, 1]], payment: "bkash", restaurant: 1, status: "out_for_delivery" },
-    { lines: [[0, 2], [2, 1], [3, 2]], payment: "nagad", restaurant: 2, status: "preparing" },
-    { lines: [[0, 1], [1, 1]], payment: "cod", restaurant: 5, status: "placed" },
-    { lines: [[1, 2]], payment: "cod", restaurant: 4, status: "cancelled" }
+  const plan: Array<{ channel: Channel; lines: Array<[number, number]>; minutesAgo: number; payment: PaymentMethod; restaurant: number; status: OrderStatus }> = [
+    { channel: "kiosk", lines: [[0, 1], [3, 2]], minutesAgo: 240, payment: "cod", restaurant: 0, status: "delivered" },
+    { channel: "webapp", lines: [[1, 1], [2, 1]], minutesAgo: 35, payment: "bkash", restaurant: 1, status: "out_for_delivery" },
+    { channel: "website", lines: [[0, 2], [2, 1], [3, 2]], minutesAgo: 12, payment: "nagad", restaurant: 2, status: "preparing" },
+    { channel: "webapp", lines: [[0, 1], [1, 1]], minutesAgo: 3, payment: "cod", restaurant: 5, status: "placed" },
+    { channel: "kiosk", lines: [[1, 2]], minutesAgo: 90, payment: "cod", restaurant: 4, status: "cancelled" }
   ];
   for (const entry of plan) {
     const restaurant = catalog[entry.restaurant];
@@ -228,8 +335,9 @@ async function seedOrders(customerId: string, catalog: SeededRestaurant[]): Prom
       return item ? [{ menuItemId: item.id, name: item.name, quantity, unitPrice: item.price }] : [];
     });
     const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+    const placedAt = new Date(Date.now() - entry.minutesAgo * 60_000).toISOString();
     await placeOrder(
-      { customerId, deliveryAddress: "House 12, Road 5, Dhanmondi, Dhaka", deliveryFee: DELIVERY_FEE_BDT, notes: "", paymentMethod: entry.payment, phone: "01712345678", restaurantId: restaurant.id, status: entry.status, subtotal, total: subtotal + DELIVERY_FEE_BDT },
+      { branchId: restaurant.branchIds[0], channel: entry.channel, placedAt, customerId, deliveryAddress: "House 12, Road 5, Dhanmondi, Dhaka", deliveryFee: DELIVERY_FEE_BDT, notes: "", paymentMethod: entry.payment, phone: "01712345678", restaurantId: restaurant.id, status: entry.status, subtotal, total: subtotal + DELIVERY_FEE_BDT },
       lines
     );
   }
@@ -246,7 +354,8 @@ export async function seedSampleOrders(customerId: string): Promise<void> {
   const catalog: SeededRestaurant[] = [];
   for (const restaurant of existing.slice(0, 6)) {
     const items = await listMenuItems(restaurant.ItemId);
-    catalog.push({ id: restaurant.ItemId, items: items.map((item) => ({ id: item.ItemId, name: item.name, price: item.price })) });
+    const restaurantBranches = await listBranches(restaurant.ItemId);
+    catalog.push({ branchIds: restaurantBranches.map((branch) => branch.ItemId), id: restaurant.ItemId, items: items.map((item) => ({ id: item.ItemId, name: item.name, price: item.price })) });
   }
   await seedOrders(customerId, catalog);
 }

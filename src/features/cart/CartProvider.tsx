@@ -2,10 +2,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 
 export type CartLine = { menuItemId: string; name: string; price: number; quantity: number };
-export type Cart = { lines: CartLine[]; restaurantId?: string; restaurantName?: string };
+export type Cart = { branchId?: string; branchName?: string; lines: CartLine[]; restaurantId?: string; restaurantName?: string };
 
 type CartContextValue = {
-  add: (restaurant: { id: string; name: string }, line: Omit<CartLine, "quantity">) => void;
+  add: (restaurant: { branchId?: string; branchName?: string; id: string; name: string }, line: Omit<CartLine, "quantity">) => void;
   cart: Cart;
   clear: () => void;
   count: number;
@@ -37,11 +37,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [cart]);
 
-  // A cart holds one restaurant's items: adding from a different restaurant
-  // starts a fresh cart rather than mixing two kitchens into one order.
+  // A cart holds one kitchen's items (restaurant + branch): adding from a
+  // different one starts a fresh cart rather than mixing kitchens in one order.
   const add = useCallback<CartContextValue["add"]>((restaurant, line) => {
     setCart((current) => {
-      const base: Cart = current.restaurantId === restaurant.id ? current : { lines: [], restaurantId: restaurant.id, restaurantName: restaurant.name };
+      const sameKitchen = current.restaurantId === restaurant.id && current.branchId === restaurant.branchId;
+      const base: Cart = sameKitchen ? current : { branchId: restaurant.branchId, branchName: restaurant.branchName, lines: [], restaurantId: restaurant.id, restaurantName: restaurant.name };
       const existing = base.lines.find((entry) => entry.menuItemId === line.menuItemId);
       const lines = existing
         ? base.lines.map((entry) => (entry.menuItemId === line.menuItemId ? { ...entry, quantity: entry.quantity + 1 } : entry))

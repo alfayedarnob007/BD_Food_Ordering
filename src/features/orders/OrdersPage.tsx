@@ -18,7 +18,8 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   delivered: "Delivered",
   out_for_delivery: "Out for delivery",
   placed: "Placed",
-  preparing: "Preparing"
+  preparing: "Preparing",
+  ready: "Ready"
 };
 
 function statusTone(status: OrderStatus): "good" | "neutral" | "warn" {
