@@ -1,4 +1,4 @@
-import { CHANNELS } from "../food/api";
+import { CHANNELS } from "../food/channels";
 import type { Channel, Order, PresenceSession } from "../food/api";
 import { isActive as orderInProgress } from "./metrics";
 

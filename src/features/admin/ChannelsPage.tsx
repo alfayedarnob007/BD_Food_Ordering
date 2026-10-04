@@ -188,8 +188,8 @@ function PresenceSimulator({ branchIds, onBeat, restaurantId }: { branchIds: str
               userId: ""
             };
             const existing = ids[index];
-            if (existing) await updatePresence(existing, beat);
-            else {
+            if (existing && (await updatePresence(existing, beat))) continue;
+            {
               const created = await startPresence(`sim-${channel}-${index}-${Date.now()}`, beat);
               if (!created) throw new Error("A simulated session was created but its id could not be read back.");
               ids[index] = created;

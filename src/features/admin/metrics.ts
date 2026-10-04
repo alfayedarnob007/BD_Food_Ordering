@@ -1,4 +1,4 @@
-import { CHANNELS } from "../food/api";
+import { CHANNELS } from "../food/channels";
 import type { Branch, Channel, Order, OrderItem, OrderStatus } from "../food/api";
 
 export type RangeKey = "today" | "7d" | "30d" | "all";

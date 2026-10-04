@@ -36,12 +36,11 @@ export function PresenceBeacon({ path }: { path: string }) {
       inFlight.current = true;
       try {
         if (recordId.current) {
-          try {
-            await updatePresence(recordId.current, payload);
-            return;
-          } catch {
-            recordId.current = undefined; // record gone or stale -- start a fresh session below
-          }
+          // A thrown error (network blip) keeps the record and retries next beat;
+          // only a confirmed "no such record" starts a fresh session, otherwise
+          // one customer would be counted twice.
+          if (await updatePresence(recordId.current, payload)) return;
+          recordId.current = undefined;
         }
         const created = await startPresence(crypto.randomUUID(), payload);
         recordId.current = created;

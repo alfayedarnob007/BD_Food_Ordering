@@ -1,4 +1,6 @@
 import { blocksClient } from "../../lib/blocks/client";
+import type { Channel } from "./channels";
+import { extractId, guard, impactedCount, listAll } from "./gateway";
 import { computeRequirements, ingredientKey } from "../admin/stock";
 
 // Schemas are defined in blocks/data/schemas. Relations are plain string ids
@@ -30,8 +32,8 @@ export type Branch = {
   timezone?: string;
 };
 
-export const CHANNELS = ["kiosk", "webapp", "website"] as const;
-export type Channel = (typeof CHANNELS)[number];
+export { CHANNELS } from "./channels";
+export type { Channel } from "./channels";
 
 export type MenuItem = {
   ItemId: string;
@@ -155,93 +157,48 @@ export type NewOrderItem = Omit<OrderItem, "ItemId" | "orderId">;
 
 export const DELIVERY_FEE_BDT = 60;
 
-const restaurants = blocksClient.data.collection<Restaurant>("Restaurant", {
+const restaurants = guard(blocksClient.data.collection<Restaurant>("Restaurant", {
   fields: ["name", "description", "address", "area", "city", "phone", "cuisines", "imageUrl", "openingHours", "isActive"]
-});
-const branches = blocksClient.data.collection<Branch>("Branch", {
+}));
+const branches = guard(blocksClient.data.collection<Branch>("Branch", {
   fields: ["restaurantId", "name", "address", "area", "city", "phone", "timezone", "openingHours", "isActive"]
-});
-const inventory = blocksClient.data.collection<InventoryItem>("InventoryItem", {
+}));
+const inventory = guard(blocksClient.data.collection<InventoryItem>("InventoryItem", {
   fields: ["restaurantId", "branchId", "name", "unit", "onHand", "reorderLevel", "costPerUnit", "isActive"]
-});
-const recipes = blocksClient.data.collection<Recipe>("MenuItemIngredient", {
+}));
+const recipes = guard(blocksClient.data.collection<Recipe>("MenuItemIngredient", {
   fields: ["restaurantId", "menuItemId", "ingredient", "quantity"]
-});
-const movements = blocksClient.data.collection<StockMovement>("StockMovement", {
+}));
+const movements = guard(blocksClient.data.collection<StockMovement>("StockMovement", {
   fields: ["restaurantId", "branchId", "inventoryItemId", "type", "quantity", "orderId", "note", "movedAt"]
-});
-const devices = blocksClient.data.collection<Device>("Device", {
+}));
+const devices = guard(blocksClient.data.collection<Device>("Device", {
   fields: ["restaurantId", "branchId", "name", "type", "appVersion", "printerStatus", "latencyMs", "uptimeMinutes", "lastError", "lastSeenAt", "isActive"]
-});
-const presence = blocksClient.data.collection<PresenceSession>("PresenceSession", {
+}));
+const presence = guard(blocksClient.data.collection<PresenceSession>("PresenceSession", {
   fields: ["restaurantId", "branchId", "channel", "sessionId", "userId", "page", "cartCount", "day", "startedAt", "lastSeenAt"]
-});
-const staff = blocksClient.data.collection<StaffAssignment>("StaffAssignment", {
+}));
+const staff = guard(blocksClient.data.collection<StaffAssignment>("StaffAssignment", {
   fields: ["userId", "email", "role", "restaurantId", "branchId"]
-});
-const menuItems = blocksClient.data.collection<MenuItem>("MenuItem", {
+}));
+const menuItems = guard(blocksClient.data.collection<MenuItem>("MenuItem", {
   fields: ["restaurantId", "name", "description", "price", "category", "imageUrl", "isAvailable"]
-});
-const orders = blocksClient.data.collection<Order>("Order", {
+}));
+const orders = guard(blocksClient.data.collection<Order>("Order", {
   fields: ["customerId", "restaurantId", "status", "subtotal", "deliveryFee", "total", "deliveryAddress", "phone", "paymentMethod", "notes", "branchId", "channel", "placedAt", "acceptedAt", "readyAt", "deliveredAt"]
-});
-const orderItems = blocksClient.data.collection<OrderItem>("OrderItem", {
+}));
+const orderItems = guard(blocksClient.data.collection<OrderItem>("OrderItem", {
   fields: ["orderId", "menuItemId", "name", "unitPrice", "quantity"]
-});
-
-// The gateway nests list results under the generated operation name
-// (data.getRestaurants.items), so find the first `items` array rather than
-// hard-coding each operation name.
-function extractItems<T>(response: unknown): T[] {
-  const data = (response as { data?: unknown } | undefined)?.data ?? response;
-  if (data && typeof data === "object") {
-    const direct = (data as { items?: unknown }).items;
-    if (Array.isArray(direct)) return direct as T[];
-    for (const value of Object.values(data)) {
-      const items = (value as { items?: unknown } | null)?.items;
-      if (Array.isArray(items)) return items as T[];
-    }
-  }
-  return [];
-}
-
-// Insert responses are shaped by the generated mutation, so look for the new
-// record's id wherever it landed instead of assuming a path.
-function extractId(value: unknown): string | undefined {
-  if (!value || typeof value !== "object") return undefined;
-  for (const [key, entry] of Object.entries(value)) {
-    if ((key === "ItemId" || key === "itemId") && typeof entry === "string") return entry;
-  }
-  for (const entry of Object.values(value)) {
-    const found = extractId(entry);
-    if (found) return found;
-  }
-  return undefined;
-}
+}));
 
 export async function listRestaurants(): Promise<Restaurant[]> {
-  const items = extractItems<Restaurant>(await restaurants.list({ pageNo: 1, pageSize: 100 }));
+  const items = await listAll<Restaurant>((options) => restaurants.list(options));
   return items.filter((restaurant) => restaurant.isActive !== false);
 }
 
 export async function listBranches(restaurantId: string): Promise<Branch[]> {
-  const items = extractItems<Branch>(await branches.list({ filter: { restaurantId }, pageNo: 1, pageSize: 50 }));
+  const items = await listAll<Branch>((options) => branches.list(options), { restaurantId });
   return items.filter((branch) => branch.isActive !== false);
-}
-
-// Pages through a collection so portal totals are not silently capped at one page.
-async function listAll<T>(
-  list: (options: { pageNo: number; pageSize: number; filter?: Record<string, unknown> }) => Promise<unknown>,
-  filter?: Record<string, unknown>
-): Promise<T[]> {
-  const pageSize = 500;
-  const all: T[] = [];
-  for (let pageNo = 1; pageNo <= 20; pageNo += 1) {
-    const page = extractItems<T>(await list({ filter, pageNo, pageSize }));
-    all.push(...page);
-    if (page.length < pageSize) break;
-  }
-  return all;
 }
 
 export function listRestaurantOrders(restaurantId: string): Promise<Order[]> {
@@ -253,7 +210,7 @@ export function listAllOrderItems(): Promise<OrderItem[]> {
 }
 
 export async function listMyAssignments(userId: string): Promise<StaffAssignment[]> {
-  return extractItems<StaffAssignment>(await staff.list({ filter: { userId }, pageNo: 1, pageSize: 20 }));
+  return listAll<StaffAssignment>((options) => staff.list(options), { userId });
 }
 
 export async function createAssignment(assignment: Omit<StaffAssignment, "ItemId">): Promise<void> {
@@ -290,9 +247,12 @@ export async function startPresence(sessionId: string, beat: PresenceBeat): Prom
   return extractId(await presence.create({ ...beat, day: now.slice(0, 10), lastSeenAt: now, sessionId, startedAt: now }));
 }
 
-export async function updatePresence(recordId: string, beat: PresenceBeat): Promise<void> {
+// False means the record no longer exists (so the caller should start a new
+// session). A thrown error means the update itself failed -- keep the record.
+export async function updatePresence(recordId: string, beat: PresenceBeat): Promise<boolean> {
   const now = new Date().toISOString();
-  await presence.update(recordId, { ...beat, day: now.slice(0, 10), lastSeenAt: now });
+  const response = await presence.update(recordId, { ...beat, day: now.slice(0, 10), lastSeenAt: now });
+  return impactedCount(response) !== 0;
 }
 
 export function listRecipes(restaurantId: string): Promise<Recipe[]> {
@@ -340,7 +300,7 @@ export async function deleteRecipeLine(id: string): Promise<void> {
 // order, so a double-click or a retry cannot deduct twice.
 async function applyOrderStock(order: Order, direction: 1 | -1): Promise<void> {
   if (!order.branchId) return;
-  const prior = extractItems<StockMovement>(await movements.list({ filter: { orderId: order.ItemId }, pageNo: 1, pageSize: 200 }));
+  const prior = await listAll<StockMovement>((options) => movements.list(options), { orderId: order.ItemId });
   const consumed = prior.some((entry) => entry.type === "usage");
   const restored = prior.some((entry) => entry.type === "usage_reversal");
   if (direction === -1 && consumed) return;
@@ -357,17 +317,17 @@ async function applyOrderStock(order: Order, direction: 1 | -1): Promise<void> {
 }
 
 export async function listMenuItems(restaurantId: string): Promise<MenuItem[]> {
-  return extractItems<MenuItem>(await menuItems.list({ filter: { restaurantId }, pageNo: 1, pageSize: 200 }));
+  return listAll<MenuItem>((options) => menuItems.list(options), { restaurantId });
 }
 
 export async function listMyOrders(customerId: string): Promise<Order[]> {
-  const items = extractItems<Order>(await orders.list({ filter: { customerId }, pageNo: 1, pageSize: 100 }));
+  const items = await listAll<Order>((options) => orders.list(options), { customerId });
   // No sort key is selected, so assume insertion order and show newest first.
   return [...items].reverse();
 }
 
 export async function listOrderItems(orderId: string): Promise<OrderItem[]> {
-  return extractItems<OrderItem>(await orderItems.list({ filter: { orderId }, pageNo: 1, pageSize: 100 }));
+  return listAll<OrderItem>((options) => orderItems.list(options), { orderId });
 }
 
 // Advances an order and stamps the matching timestamp, which is what the
@@ -390,9 +350,16 @@ export async function updateOrderStatus(order: Order, status: OrderStatus): Prom
 export async function placeOrder(order: NewOrder, lines: NewOrderItem[]): Promise<string> {
   const created = await orders.create(order);
   const orderId = extractId(created);
-  if (!orderId) throw new Error("Order was created but its id could not be read back, so its items were not saved.");
-  for (const line of lines) {
-    await orderItems.create({ ...line, orderId });
+  if (!orderId) throw new Error("Your order was saved but could not be confirmed. Please check My orders before trying again.");
+  try {
+    for (const line of lines) {
+      await orderItems.create({ ...line, orderId });
+    }
+  } catch (error) {
+    // No transactions here: an order with missing items would reach the kitchen
+    // looking valid, so withdraw it (best effort) and tell the customer plainly.
+    await orders.update(orderId, { status: "cancelled" }).catch(() => undefined);
+    throw new Error(`We could not save all items, so the order was cancelled and nothing was charged. Please try again. (${error instanceof Error ? error.message : "unknown error"})`);
   }
   return orderId;
 }
