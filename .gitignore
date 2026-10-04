@@ -5,3 +5,6 @@ dist/
 .env.*.local
 env.*
 .cert/
+
+# e2e outputs (screenshots) -- credentials never live in the repo
+e2e/.out/

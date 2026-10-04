@@ -73,9 +73,23 @@ npm run lint  # tsc --noEmit
 
 The logic files under `src/features/admin/` import only types from the data layer, so they run without the SDK.
 
+### Signed-in walkthrough (e2e)
+
+Scripts in `e2e/` drive a real headless Chrome through the hosted login and exercise the customer flow and every operations tab, reporting console errors, failed API calls and GraphQL errors hidden inside HTTP 200s.
+
+```bash
+# test users: one customer, one staff member who will claim restaurant admin
+export E2E_CREDS=/path/outside/repo/creds.json   # {"mgr":{"email":"..","password":".."},"cust":{...}}
+node e2e/customer-order.mjs
+node e2e/ops-dashboard-kitchen-inventory.mjs
+node e2e/ops-devices-channels.mjs
+```
+
+They need the dev server running and the demo data present. Screenshots go to `e2e/.out/`.
+
 ### Known gaps -- read before real use
 
-1. **No server-side branch enforcement.** Branch scoping is done in the portal from the user's `StaffAssignment`. Any signed-in user can still read or change any record through the API. Fixing this needs row-level policies keyed to something in the user's token (a branch claim or per-branch roles). Policy rules use `leftOperand`, `operator`, `rightSource` and `rightOperand`; test any policy with a second real user before deploying it, because a wrong one locks everyone out.
+1. **No server-side branch enforcement.** Branch scoping is done in the portal from the user's `StaffAssignment`. Any signed-in user can still read or change any record through the API. Row-level policies were tried on a scratch schema with two real users and were **not safe to deploy**: with a policy on a Custom-level schema, identical requests returned the correct rows, an empty list or `Unexpected Execution Error` at random (roughly 30/20/45%) and did not settle over six quiet minutes; the policy also never showed as attached to the schema (`readPolicies` stayed empty). A static-value rule (`rightSource` 2 with `staticValue`) did filter correctly when it evaluated. Revisit with the Blocks team before relying on policies; until then treat branch scoping as a UI convenience, not a security boundary.
 2. **Anyone can make themselves admin.** The "Continue as restaurant admin" card on `/admin` is a dev bootstrap. Replace it with an admin-granted `StaffAssignment` and the `restaurant-admin` role.
 3. **Stock writes are not atomic.** The browser reads, adjusts and writes on-hand quantity; simultaneous edits to one item can overwrite each other. The ledger records both. A server workflow should own these writes.
 4. **Device heartbeats are stamped by the sender's clock**, and only the in-page simulator sends them. Real kiosks need an ingest endpoint that stamps time server-side.
