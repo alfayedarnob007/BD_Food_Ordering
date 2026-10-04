@@ -1,0 +1,39 @@
+{
+  "schemaName": "MenuItemIngredient",
+  "schemaType": 1,
+  "collectionName": "MenuItemIngredients",
+  "fields": [
+    {
+      "name": "restaurantId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "menuItemId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "MenuItem.ItemId"
+    },
+    {
+      "name": "ingredient",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Matches InventoryItem.name at the order's branch"
+    },
+    {
+      "name": "quantity",
+      "type": "Float",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Per one serving"
+    }
+  ]
+}

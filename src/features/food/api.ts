@@ -1,4 +1,5 @@
 import { blocksClient } from "../../lib/blocks/client";
+import { computeRequirements, ingredientKey } from "../admin/stock";
 
 // Schemas are defined in blocks/data/schemas. Relations are plain string ids
 // (restaurantId, orderId, ...) -- there is no reference type, so joins happen here.
@@ -77,6 +78,34 @@ export type OrderItem = {
   unitPrice: number;
 };
 
+export type InventoryItem = {
+  ItemId: string;
+  branchId: string;
+  costPerUnit?: number;
+  isActive?: boolean;
+  name: string;
+  onHand: number;
+  reorderLevel: number;
+  restaurantId: string;
+  unit: string;
+};
+
+export type Recipe = { ItemId: string; ingredient: string; menuItemId: string; quantity: number; restaurantId: string };
+
+export const MOVEMENT_TYPES = ["restock", "usage", "usage_reversal", "waste", "adjustment"] as const;
+export type MovementType = (typeof MOVEMENT_TYPES)[number];
+export type StockMovement = {
+  ItemId: string;
+  branchId: string;
+  inventoryItemId: string;
+  movedAt?: string;
+  note?: string;
+  orderId?: string;
+  quantity: number;
+  restaurantId: string;
+  type: MovementType;
+};
+
 export const STAFF_ROLES = ["restaurant-admin", "branch-manager", "kitchen-staff"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
@@ -99,6 +128,15 @@ const restaurants = blocksClient.data.collection<Restaurant>("Restaurant", {
 });
 const branches = blocksClient.data.collection<Branch>("Branch", {
   fields: ["restaurantId", "name", "address", "area", "city", "phone", "timezone", "openingHours", "isActive"]
+});
+const inventory = blocksClient.data.collection<InventoryItem>("InventoryItem", {
+  fields: ["restaurantId", "branchId", "name", "unit", "onHand", "reorderLevel", "costPerUnit", "isActive"]
+});
+const recipes = blocksClient.data.collection<Recipe>("MenuItemIngredient", {
+  fields: ["restaurantId", "menuItemId", "ingredient", "quantity"]
+});
+const movements = blocksClient.data.collection<StockMovement>("StockMovement", {
+  fields: ["restaurantId", "branchId", "inventoryItemId", "type", "quantity", "orderId", "note", "movedAt"]
 });
 const staff = blocksClient.data.collection<StaffAssignment>("StaffAssignment", {
   fields: ["userId", "email", "role", "restaurantId", "branchId"]
@@ -184,6 +222,71 @@ export async function createAssignment(assignment: Omit<StaffAssignment, "ItemId
   await staff.create(assignment);
 }
 
+export function listInventory(restaurantId: string): Promise<InventoryItem[]> {
+  return listAll<InventoryItem>((options) => inventory.list(options), { restaurantId }).then((items) => items.filter((item) => item.isActive !== false));
+}
+
+export function listRecipes(restaurantId: string): Promise<Recipe[]> {
+  return listAll<Recipe>((options) => recipes.list(options), { restaurantId });
+}
+
+export async function listMovements(restaurantId: string, branchId: string): Promise<StockMovement[]> {
+  const items = await listAll<StockMovement>((options) => movements.list(options), { branchId, restaurantId });
+  return items.sort((a, b) => Date.parse(b.movedAt ?? "") - Date.parse(a.movedAt ?? "")).slice(0, 25);
+}
+
+export async function createInventoryItem(item: Omit<InventoryItem, "ItemId">): Promise<void> {
+  await inventory.create(item);
+}
+
+// Stock changes always go through here so every change leaves a ledger row.
+// NOTE: read-modify-write from the browser is not atomic; two people adjusting
+// the same item in the same second can lose an update. A server-side workflow
+// owning this write is the production fix.
+export async function adjustStock(item: InventoryItem, change: number, type: MovementType, note?: string, orderId?: string): Promise<void> {
+  const onHand = Math.max(0, Math.round((item.onHand + change) * 1000) / 1000);
+  await inventory.update(item.ItemId, { onHand });
+  await movements.create({
+    branchId: item.branchId,
+    inventoryItemId: item.ItemId,
+    movedAt: new Date().toISOString(),
+    note: note ?? "",
+    orderId: orderId ?? "",
+    quantity: onHand - item.onHand,
+    restaurantId: item.restaurantId,
+    type
+  });
+}
+
+export async function saveRecipeLine(line: Omit<Recipe, "ItemId">): Promise<void> {
+  await recipes.create(line);
+}
+
+export async function deleteRecipeLine(id: string): Promise<void> {
+  await recipes.delete(id);
+}
+
+// direction -1 consumes stock for the order, +1 restores it. Skipped when the
+// order has no branch (we cannot know whose stock to touch) and idempotent per
+// order, so a double-click or a retry cannot deduct twice.
+async function applyOrderStock(order: Order, direction: 1 | -1): Promise<void> {
+  if (!order.branchId) return;
+  const prior = extractItems<StockMovement>(await movements.list({ filter: { orderId: order.ItemId }, pageNo: 1, pageSize: 200 }));
+  const consumed = prior.some((entry) => entry.type === "usage");
+  const restored = prior.some((entry) => entry.type === "usage_reversal");
+  if (direction === -1 && consumed) return;
+  if (direction === 1 && (!consumed || restored)) return;
+
+  const [lines, recipeRows, stock] = await Promise.all([listOrderItems(order.ItemId), listRecipes(order.restaurantId), listInventory(order.restaurantId)]);
+  const needed = computeRequirements(lines, recipeRows);
+  for (const item of stock) {
+    if (item.branchId !== order.branchId) continue;
+    const quantity = needed.get(ingredientKey(item.name));
+    if (!quantity) continue;
+    await adjustStock(item, direction * quantity, direction === -1 ? "usage" : "usage_reversal", `Order #${order.ItemId.slice(-4).toUpperCase()}`, order.ItemId);
+  }
+}
+
 export async function listMenuItems(restaurantId: string): Promise<MenuItem[]> {
   return extractItems<MenuItem>(await menuItems.list({ filter: { restaurantId }, pageNo: 1, pageSize: 200 }));
 }
@@ -199,11 +302,20 @@ export async function listOrderItems(orderId: string): Promise<OrderItem[]> {
 }
 
 // Advances an order and stamps the matching timestamp, which is what the
-// kitchen board uses to measure prep time.
-export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
+// kitchen board uses to measure prep time. Accepting an order consumes stock;
+// cancelling one that was already accepted gives it back.
+export async function updateOrderStatus(order: Order, status: OrderStatus): Promise<void> {
   const now = new Date().toISOString();
   const stamp: Partial<Order> = status === "accepted" ? { acceptedAt: now } : status === "ready" ? { readyAt: now } : status === "delivered" ? { deliveredAt: now } : {};
-  await orders.update(orderId, { status, ...stamp });
+  await orders.update(order.ItemId, { status, ...stamp });
+  // The status change above is already saved. If stock then fails, say exactly
+  // that instead of a bare error that makes it look like nothing happened.
+  try {
+    if (status === "accepted") await applyOrderStock(order, -1);
+    if (status === "cancelled" && order.status === "accepted") await applyOrderStock(order, 1);
+  } catch (error) {
+    throw new Error(`The order was updated, but stock was not adjusted: ${error instanceof Error ? error.message : "unknown error"}`);
+  }
 }
 
 export async function placeOrder(order: NewOrder, lines: NewOrderItem[]): Promise<string> {
@@ -432,5 +544,34 @@ export async function seedKitchenDemo(restaurantId: string, customerId: string):
       },
       lines
     );
+  }
+}
+
+// Dev tool: stocks every branch of a restaurant and wires each menu item to
+// two ingredients, with a couple of items deliberately low or out so the
+// alerts have something to show. Only adds records.
+export async function seedInventoryDemo(restaurantId: string): Promise<void> {
+  const branchList = await listBranches(restaurantId);
+  const menu = await listMenuItems(restaurantId);
+  if (branchList.length === 0) throw new Error("Add branches first (use Add demo orders on the Kitchen page).");
+
+  const catalogue: Array<[string, string, number, number]> = [
+    ["Rice", "kg", 40, 10], ["Chicken", "kg", 25, 8], ["Beef", "kg", 18, 6], ["Cooking oil", "l", 20, 5],
+    ["Spice mix", "kg", 6, 2], ["Potato", "kg", 30, 8], ["Eggs", "pcs", 120, 40], ["Flour", "kg", 22, 6],
+    ["Milk", "l", 15, 5], ["Takeaway boxes", "pcs", 300, 100]
+  ];
+  for (const [branchIndex, branch] of branchList.entries()) {
+    for (const [index, [name, unit, onHand, reorderLevel]] of catalogue.entries()) {
+      // Shape the first branch: one item low, one out; the second branch is fully stocked.
+      const level = branchIndex === 0 && index === 1 ? reorderLevel - 1 : branchIndex === 0 && index === 4 ? 0 : onHand;
+      await inventory.create({ branchId: branch.ItemId, costPerUnit: 100 + index * 20, isActive: true, name, onHand: level, reorderLevel, restaurantId, unit });
+    }
+  }
+  const quantities = [0.25, 0.15, 0.3, 0.1];
+  for (const [index, item] of menu.entries()) {
+    for (const offset of [0, 1]) {
+      const [ingredient] = catalogue[(index * 2 + offset) % catalogue.length] as [string, string, number, number];
+      await recipes.create({ ingredient, menuItemId: item.ItemId, quantity: quantities[(index + offset) % quantities.length] as number, restaurantId });
+    }
   }
 }

@@ -7,6 +7,7 @@ import { ErrorPage } from "../../features/auth/ErrorPage";
 import { LoginPage } from "../../features/auth/LoginPage";
 import { NotFoundPage } from "../../features/auth/NotFoundPage";
 import { AdminPage } from "../../features/admin/AdminPage";
+import { InventoryPage } from "../../features/admin/InventoryPage";
 import { KitchenPage } from "../../features/admin/KitchenPage";
 import { CartPage } from "../../features/cart/CartPage";
 import { OrdersPage } from "../../features/orders/OrdersPage";
@@ -18,6 +19,7 @@ export type PageProps = { onNavigate: (path: string) => void; path: string };
 
 const protectedRoutes: Record<string, ComponentType<PageProps>> = {
   "/admin": AdminPage,
+  "/admin/inventory": InventoryPage,
   "/admin/kitchen": KitchenPage,
   "/": RestaurantsPage,
   "/cart": CartPage,

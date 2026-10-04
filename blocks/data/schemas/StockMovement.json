@@ -1,0 +1,71 @@
+{
+  "schemaName": "StockMovement",
+  "schemaType": 1,
+  "collectionName": "StockMovements",
+  "fields": [
+    {
+      "name": "restaurantId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "branchId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "inventoryItemId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "type",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "restock|usage|usage_reversal|waste|adjustment"
+    },
+    {
+      "name": "quantity",
+      "type": "Float",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Signed change in stock"
+    },
+    {
+      "name": "orderId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Set for usage and reversal"
+    },
+    {
+      "name": "note",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "movedAt",
+      "type": "DateTime",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "schemaName": "InventoryItem",
+  "schemaType": 1,
+  "collectionName": "InventoryItems",
+  "fields": [
+    {
+      "name": "restaurantId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "branchId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Branch.ItemId -- stock is held per branch"
+    },
+    {
+      "name": "name",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "unit",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "kg|l|pcs"
+    },
+    {
+      "name": "onHand",
+      "type": "Float",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Current stock in `unit`"
+    },
+    {
+      "name": "reorderLevel",
+      "type": "Float",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Low-stock threshold"
+    },
+    {
+      "name": "costPerUnit",
+      "type": "Int",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "BDT per unit"
+    },
+    {
+      "name": "isActive",
+      "type": "Boolean",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    }
+  ]
+}

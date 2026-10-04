@@ -50,8 +50,11 @@ function Board({ canViewDashboard, lockedBranch, onNavigate, restaurantId }: { c
   const orders = useQuery({ queryFn: () => listRestaurantOrders(restaurantId), queryKey: ["admin", "orders", restaurantId], refetchInterval: 8_000 });
   const lines = useQuery({ queryFn: listAllOrderItems, queryKey: ["admin", "lines"], refetchInterval: 30_000 });
   const advance = useMutation({
-    mutationFn: ({ orderId, status }: { orderId: string; status: OrderStatus }) => updateOrderStatus(orderId, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "orders", restaurantId] })
+    mutationFn: ({ order, status }: { order: Order; status: OrderStatus }) => updateOrderStatus(order, status),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin", "orders", restaurantId] }),
+      queryClient.invalidateQueries({ queryKey: ["inventory"] })
+    ])
   });
 
   const visible = (orders.data ?? []).filter((order) => !branchFilter || order.branchId === branchFilter);
@@ -119,7 +122,7 @@ function Board({ canViewDashboard, lockedBranch, onNavigate, restaurantId }: { c
                   const late = isLate(order, now);
                   const minutes = stageMinutes(order, now);
                   const items = linesByOrder.get(order.ItemId) ?? [];
-                  const busy = advance.isPending && advance.variables?.orderId === order.ItemId;
+                  const busy = advance.isPending && advance.variables?.order.ItemId === order.ItemId;
                   return (
                     <article key={order.ItemId} className={`ticket${late ? " late" : ""}`}>
                       <header>
@@ -132,8 +135,8 @@ function Board({ canViewDashboard, lockedBranch, onNavigate, restaurantId }: { c
                       </ul>
                       {order.notes ? <p className="ticket-note">Note: {order.notes}</p> : null}
                       <footer>
-                        {next ? <ActionButton disabled={busy} onClick={() => advance.mutate({ orderId: order.ItemId, status: next.status })}>{busy ? "Saving..." : next.label}</ActionButton> : null}
-                        {CANCELLABLE.includes(order.status) ? <button className="link-button" disabled={busy} onClick={() => advance.mutate({ orderId: order.ItemId, status: "cancelled" })}>Cancel</button> : null}
+                        {next ? <ActionButton disabled={busy} onClick={() => advance.mutate({ order, status: next.status })}>{busy ? "Saving..." : next.label}</ActionButton> : null}
+                        {CANCELLABLE.includes(order.status) ? <button className="link-button" disabled={busy} onClick={() => advance.mutate({ order, status: "cancelled" })}>Cancel</button> : null}
                       </footer>
                     </article>
                   );
