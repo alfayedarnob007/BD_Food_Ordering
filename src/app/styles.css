@@ -336,3 +336,5 @@ tbody tr:last-child td { border-bottom: 0; }
 .trend-axis { fill: hsl(var(--muted-foreground)); font-size: 11px; }
 .trend-dot { stroke: hsl(var(--card)); stroke-width: 2; }
 .trend-note { font-size: 12px; margin: 8px 0 0; }
+
+.viz-grid .panel { align-content: start; }

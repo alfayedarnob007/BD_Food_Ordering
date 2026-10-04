@@ -37,6 +37,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.0.5",
     "autoprefixer": "^10.5.4",
+    "playwright-core": "^1.63.0",
     "postcss": "^8.5.25",
     "selfsigned": "^2.4.1",
     "tailwindcss": "^3.4.17",

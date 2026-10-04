@@ -132,22 +132,24 @@ function Trend({ samples }: { samples: Sample[] }) {
   const max = Math.max(1, ...samples.flatMap((sample) => CHANNELS.map((channel) => sample.counts[channel])));
   const top = Math.ceil(max / 2) * 2;
   const first = samples[0]?.at ?? 0;
-  const span = Math.max(60_000, (samples.at(-1)?.at ?? 0) - first);
+  // The newest sample sits on the right edge, so the axis always ends at "now".
+  const span = Math.max(10_000, (samples.at(-1)?.at ?? 0) - first);
   const x = (at: number) => pad.left + ((at - first) / span) * (width - pad.left - pad.right);
   const y = (value: number) => pad.top + (1 - value / top) * (height - pad.top - pad.bottom);
   const minutes = Math.round(span / 60_000);
+  const spanLabel = span < 90_000 ? `${Math.round(span / 1000)}s ago` : `${minutes} min ago`;
   const latest = samples.at(-1);
 
   if (samples.length < 2) return <p className="muted">Collecting data... the trend appears after the second refresh.</p>;
   return (
-    <svg className="trend" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Active customers over the last ${minutes} minutes. Now: ${CHANNELS.map((channel) => `${LABEL[channel]} ${latest?.counts[channel] ?? 0}`).join(", ")}.`}>
+    <svg className="trend" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Active customers over the last ${spanLabel.replace(" ago", "")}. Now: ${CHANNELS.map((channel) => `${LABEL[channel]} ${latest?.counts[channel] ?? 0}`).join(", ")}.`}>
       {[0, top / 2, top].map((tick) => (
         <g key={tick}>
           <line x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} className="trend-grid" />
           <text x={pad.left - 6} y={y(tick) + 4} textAnchor="end" className="trend-axis">{tick}</text>
         </g>
       ))}
-      <text x={pad.left} y={height - 4} className="trend-axis">{minutes} min ago</text>
+      <text x={pad.left} y={height - 4} className="trend-axis">{spanLabel}</text>
       <text x={width - pad.right} y={height - 4} textAnchor="end" className="trend-axis">now</text>
       {CHANNELS.map((channel) => (
         <g key={channel}>
