@@ -168,6 +168,90 @@
       "operation": 3,
       "policyType": 0,
       "schemaId": "7c5144b4-c26f-4367-8b32-fa97d8933196"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 0,
+      "policyType": 0,
+      "schemaId": "6b47aaed-48f5-46d8-b713-bc746d9d14f5"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 1,
+      "policyType": 0,
+      "schemaId": "6b47aaed-48f5-46d8-b713-bc746d9d14f5"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 2,
+      "policyType": 0,
+      "schemaId": "6b47aaed-48f5-46d8-b713-bc746d9d14f5"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 3,
+      "policyType": 0,
+      "schemaId": "6b47aaed-48f5-46d8-b713-bc746d9d14f5"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 0,
+      "policyType": 0,
+      "schemaId": "e1047abd-a085-483b-8e8c-72b75da63cbb"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 1,
+      "policyType": 0,
+      "schemaId": "e1047abd-a085-483b-8e8c-72b75da63cbb"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 2,
+      "policyType": 0,
+      "schemaId": "e1047abd-a085-483b-8e8c-72b75da63cbb"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 3,
+      "policyType": 0,
+      "schemaId": "e1047abd-a085-483b-8e8c-72b75da63cbb"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 0,
+      "policyType": 0,
+      "schemaId": "ea1872fa-dc1d-464b-8275-834c383dbffd"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 1,
+      "policyType": 0,
+      "schemaId": "ea1872fa-dc1d-464b-8275-834c383dbffd"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 2,
+      "policyType": 0,
+      "schemaId": "ea1872fa-dc1d-464b-8275-834c383dbffd"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 3,
+      "policyType": 0,
+      "schemaId": "ea1872fa-dc1d-464b-8275-834c383dbffd"
     }
   ]
 }
