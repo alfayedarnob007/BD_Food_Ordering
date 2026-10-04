@@ -106,6 +106,23 @@ export type StockMovement = {
   type: MovementType;
 };
 
+export type PrinterStatus = "ok" | "paper_low" | "error";
+export type Device = {
+  ItemId: string;
+  appVersion?: string;
+  branchId: string;
+  isActive?: boolean;
+  lastError?: string;
+  lastSeenAt?: string;
+  latencyMs?: number;
+  name: string;
+  printerStatus?: PrinterStatus;
+  restaurantId: string;
+  type?: string;
+  uptimeMinutes?: number;
+};
+export type Heartbeat = Pick<Device, "appVersion" | "lastError" | "latencyMs" | "printerStatus" | "uptimeMinutes">;
+
 export const STAFF_ROLES = ["restaurant-admin", "branch-manager", "kitchen-staff"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
@@ -137,6 +154,9 @@ const recipes = blocksClient.data.collection<Recipe>("MenuItemIngredient", {
 });
 const movements = blocksClient.data.collection<StockMovement>("StockMovement", {
   fields: ["restaurantId", "branchId", "inventoryItemId", "type", "quantity", "orderId", "note", "movedAt"]
+});
+const devices = blocksClient.data.collection<Device>("Device", {
+  fields: ["restaurantId", "branchId", "name", "type", "appVersion", "printerStatus", "latencyMs", "uptimeMinutes", "lastError", "lastSeenAt", "isActive"]
 });
 const staff = blocksClient.data.collection<StaffAssignment>("StaffAssignment", {
   fields: ["userId", "email", "role", "restaurantId", "branchId"]
@@ -224,6 +244,20 @@ export async function createAssignment(assignment: Omit<StaffAssignment, "ItemId
 
 export function listInventory(restaurantId: string): Promise<InventoryItem[]> {
   return listAll<InventoryItem>((options) => inventory.list(options), { restaurantId }).then((items) => items.filter((item) => item.isActive !== false));
+}
+
+export function listDevices(restaurantId: string): Promise<Device[]> {
+  return listAll<Device>((options) => devices.list(options), { restaurantId }).then((items) => items.filter((device) => device.isActive !== false));
+}
+
+export async function createDevice(device: Omit<Device, "ItemId">): Promise<void> {
+  await devices.create(device);
+}
+
+// What a kiosk sends every ~20-30s. lastSeenAt is stamped here, from the
+// sender's clock -- a real ingest endpoint should stamp it server-side instead.
+export async function sendHeartbeat(deviceId: string, beat: Heartbeat): Promise<void> {
+  await devices.update(deviceId, { ...beat, lastSeenAt: new Date().toISOString() });
 }
 
 export function listRecipes(restaurantId: string): Promise<Recipe[]> {

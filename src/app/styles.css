@@ -320,3 +320,8 @@ tbody tr:last-child td { border-bottom: 0; }
 .timer { color: hsl(var(--muted-foreground)); font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 700; }
 .timer.late { color: hsl(var(--destructive)); }
 .demo-tools { display: grid; gap: 8px; justify-items: start; }
+
+/* Devices */
+.chip.issue-problem { background: hsl(var(--destructive) / 0.12); color: hsl(var(--destructive)); }
+.chip.issue-warning { background: hsl(var(--warning-bg)); color: hsl(var(--warning-fg)); }
+.sim-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 12px; }

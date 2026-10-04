@@ -1,0 +1,95 @@
+{
+  "schemaName": "Device",
+  "schemaType": 1,
+  "collectionName": "Devices",
+  "fields": [
+    {
+      "name": "restaurantId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "branchId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Branch.ItemId"
+    },
+    {
+      "name": "name",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "type",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "kiosk"
+    },
+    {
+      "name": "appVersion",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Semantic version, e.g. 2.4.1"
+    },
+    {
+      "name": "printerStatus",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "ok|paper_low|error"
+    },
+    {
+      "name": "latencyMs",
+      "type": "Int",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Round-trip to the API, ms"
+    },
+    {
+      "name": "uptimeMinutes",
+      "type": "Int",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "lastError",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "lastSeenAt",
+      "type": "DateTime",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Last heartbeat"
+    },
+    {
+      "name": "isActive",
+      "type": "Boolean",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    }
+  ]
+}
