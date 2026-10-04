@@ -42,6 +42,58 @@ The scaffold includes `Dockerfile` and `nginx.conf` for Blocks Release. The Rele
 
 During each environment build, `scripts/write-release-env.mjs` writes `dist/env.<environment>` from client-safe Docker build args or local `.env` files. Root `.env` remains gitignored and must not be committed.
 
+## BD Food Ordering
+
+Customer app plus a restaurant operations portal, on Blocks Data.
+
+**Customers** (`/`): browse restaurants, pick a branch, build a cart, check out (cash on delivery, bKash or Nagad selection -- online payment is not connected), and see order history.
+
+**Operations portal** (`/admin`, staff only):
+
+| Tab | What it does |
+|---|---|
+| Dashboard | Orders, revenue, average order, active orders; orders by branch; channel split; popular items; orders in progress |
+| Kitchen | Live board (New / Preparing / Ready / Out for delivery), stage timers with overdue flags, advance and cancel actions, kitchen health |
+| Inventory | Stock per branch, low and out alerts, adjust stock, recipes, movement ledger; accepting an order deducts stock |
+| Devices | Kiosk fleet health derived from heartbeats (online under 90s, delayed under 5 min, offline after), per-device issues, simulator |
+| Channels | Active customers, carts and orders per channel (kiosk, web app, website), live trend, simulator |
+
+Data model (`blocks/data/schemas`): Restaurant, Branch, MenuItem, Order, OrderItem, StaffAssignment, InventoryItem, MenuItemIngredient, StockMovement, Device, PresenceSession. Access levels live in `blocks/data/rules.json` (catalogue reads are public; everything else needs sign-in).
+
+### Demo data (dev only)
+
+The empty states have dev buttons that only ever add records: sample restaurants, demo orders, demo inventory, demo kiosks. The Devices and Channels pages also have simulators that stand in for kiosks and the website, which have no apps yet. Remove all of these before real use.
+
+### Tests
+
+```bash
+npm test      # vitest: metrics, kitchen, stock, devices, presence and gateway helpers
+npm run lint  # tsc --noEmit
+```
+
+The logic files under `src/features/admin/` import only types from the data layer, so they run without the SDK.
+
+### Known gaps -- read before real use
+
+1. **No server-side branch enforcement.** Branch scoping is done in the portal from the user's `StaffAssignment`. Any signed-in user can still read or change any record through the API. Fixing this needs row-level policies keyed to something in the user's token (a branch claim or per-branch roles). Policy rules use `leftOperand`, `operator`, `rightSource` and `rightOperand`; test any policy with a second real user before deploying it, because a wrong one locks everyone out.
+2. **Anyone can make themselves admin.** The "Continue as restaurant admin" card on `/admin` is a dev bootstrap. Replace it with an admin-granted `StaffAssignment` and the `restaurant-admin` role.
+3. **Stock writes are not atomic.** The browser reads, adjusts and writes on-hand quantity; simultaneous edits to one item can overwrite each other. The ledger records both. A server workflow should own these writes.
+4. **Device heartbeats are stamped by the sender's clock**, and only the in-page simulator sends them. Real kiosks need an ingest endpoint that stamps time server-side.
+5. **Session records accumulate** (one `PresenceSession` per browser session). Add retention before real traffic.
+6. **Popular items read every order line in the project** and filter in the browser. Fine for a demo; replace with server-side rollups at volume.
+
+### Server-side workflows still to build
+
+None exist yet; each needs a cloud change that should be reviewed first (`blocks logic workflow import --dry-run`, then `--yes`, then publish).
+
+| Workflow | Trigger | Does | Needs first |
+|---|---|---|---|
+| Atomic stock | Order updated to accepted or cancelled | Applies recipe deductions and writes `StockMovement` rows server-side | Decide whether the client deduction is then removed |
+| Low-stock alert | `InventoryItem` updated | If `onHand <= reorderLevel`, mail the branch manager | A mail template; recipients from `StaffAssignment` |
+| Offline-kiosk alert | Schedule, every minute | Find devices silent for over 5 minutes, mail the branch manager | Same as above; a way to avoid re-alerting every minute |
+| Kiosk ingest | Webhook | Validate a device key, update the `Device` row with a server timestamp | A device identity (service user or key) and role |
+| Presence retention | Schedule, daily | Remove `PresenceSession` rows older than the retention window | A decision on retention; this is a bulk delete, so review it carefully |
+
 ## What's included
 
 - `/login` — login page (redirects to Blocks IAM).
