@@ -280,6 +280,34 @@
       "operation": 3,
       "policyType": 0,
       "schemaId": "55ee040b-9917-4eeb-95ea-33ddbb15c6eb"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 0,
+      "policyType": 0,
+      "schemaId": "a243df84-ce7c-49a7-8aa9-8185b8c33de0"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 1,
+      "policyType": 0,
+      "schemaId": "a243df84-ce7c-49a7-8aa9-8185b8c33de0"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 2,
+      "policyType": 0,
+      "schemaId": "a243df84-ce7c-49a7-8aa9-8185b8c33de0"
+    },
+    {
+      "accessLevel": 1,
+      "fieldNames": [],
+      "operation": 3,
+      "policyType": 0,
+      "schemaId": "a243df84-ce7c-49a7-8aa9-8185b8c33de0"
     }
   ]
 }
