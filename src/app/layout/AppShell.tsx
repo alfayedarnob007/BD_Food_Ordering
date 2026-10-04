@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { CartButton } from "./CartButton";
 import { useStaff } from "../../features/admin/useStaff";
+import { PresenceBeacon } from "./PresenceBeacon";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { navItems } from "./navItems";
 import { NotificationsMenu } from "./NotificationsMenu";
@@ -25,7 +26,7 @@ function useIsMobile(): boolean {
   return isMobile;
 }
 
-export function AppShell({ activePath, children, onNavigate }: { activePath: string; children: ReactNode; onNavigate: (path: string) => void }) {
+export function AppShell({ activePath, children, onNavigate, path }: { activePath: string; children: ReactNode; onNavigate: (path: string) => void; path: string }) {
   const isMobile = useIsMobile();
   const [collapsedPref, setCollapsedPref] = useState(() => localStorage.getItem(COLLAPSED_KEY) === "true");
   const { t } = useT();
@@ -44,6 +45,7 @@ export function AppShell({ activePath, children, onNavigate }: { activePath: str
 
   return (
     <div className="shell">
+      <PresenceBeacon path={path} />
       <aside className={collapsed ? "collapsed" : ""}>
         <div className="sidebar-header">
           {collapsed ? null : (

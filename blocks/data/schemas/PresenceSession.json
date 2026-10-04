@@ -1,0 +1,87 @@
+{
+  "schemaName": "PresenceSession",
+  "schemaType": 1,
+  "collectionName": "PresenceSessions",
+  "fields": [
+    {
+      "name": "restaurantId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Restaurant being viewed; empty when browsing the marketplace"
+    },
+    {
+      "name": "branchId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "channel",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "kiosk|webapp|website"
+    },
+    {
+      "name": "sessionId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "userId",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "IAM user ItemId; empty for anonymous"
+    },
+    {
+      "name": "page",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Where the customer is"
+    },
+    {
+      "name": "cartCount",
+      "type": "Int",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "Items in cart"
+    },
+    {
+      "name": "day",
+      "type": "String",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": "UTC yyyy-mm-dd of the last beat; bounds the daily query"
+    },
+    {
+      "name": "startedAt",
+      "type": "DateTime",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    },
+    {
+      "name": "lastSeenAt",
+      "type": "DateTime",
+      "isArray": false,
+      "isPIIData": false,
+      "isUniqueData": false,
+      "description": ""
+    }
+  ]
+}

@@ -123,6 +123,21 @@ export type Device = {
 };
 export type Heartbeat = Pick<Device, "appVersion" | "lastError" | "latencyMs" | "printerStatus" | "uptimeMinutes">;
 
+export type PresenceSession = {
+  ItemId: string;
+  branchId?: string;
+  cartCount?: number;
+  channel: Channel;
+  day?: string;
+  lastSeenAt?: string;
+  page?: string;
+  restaurantId: string;
+  sessionId?: string;
+  startedAt?: string;
+  userId?: string;
+};
+export type PresenceBeat = Pick<PresenceSession, "branchId" | "cartCount" | "channel" | "page" | "restaurantId" | "userId">;
+
 export const STAFF_ROLES = ["restaurant-admin", "branch-manager", "kitchen-staff"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
@@ -157,6 +172,9 @@ const movements = blocksClient.data.collection<StockMovement>("StockMovement", {
 });
 const devices = blocksClient.data.collection<Device>("Device", {
   fields: ["restaurantId", "branchId", "name", "type", "appVersion", "printerStatus", "latencyMs", "uptimeMinutes", "lastError", "lastSeenAt", "isActive"]
+});
+const presence = blocksClient.data.collection<PresenceSession>("PresenceSession", {
+  fields: ["restaurantId", "branchId", "channel", "sessionId", "userId", "page", "cartCount", "day", "startedAt", "lastSeenAt"]
 });
 const staff = blocksClient.data.collection<StaffAssignment>("StaffAssignment", {
   fields: ["userId", "email", "role", "restaurantId", "branchId"]
@@ -258,6 +276,23 @@ export async function createDevice(device: Omit<Device, "ItemId">): Promise<void
 // sender's clock -- a real ingest endpoint should stamp it server-side instead.
 export async function sendHeartbeat(deviceId: string, beat: Heartbeat): Promise<void> {
   await devices.update(deviceId, { ...beat, lastSeenAt: new Date().toISOString() });
+}
+
+// Only today's sessions are read: `day` is rewritten on every beat, so a session
+// that crosses midnight moves into the new day instead of growing this list.
+export function listPresence(restaurantId: string, day: string): Promise<PresenceSession[]> {
+  return listAll<PresenceSession>((options) => presence.list(options), { day, restaurantId });
+}
+
+// Returns the new session's record id so later beats can update it in place.
+export async function startPresence(sessionId: string, beat: PresenceBeat): Promise<string | undefined> {
+  const now = new Date().toISOString();
+  return extractId(await presence.create({ ...beat, day: now.slice(0, 10), lastSeenAt: now, sessionId, startedAt: now }));
+}
+
+export async function updatePresence(recordId: string, beat: PresenceBeat): Promise<void> {
+  const now = new Date().toISOString();
+  await presence.update(recordId, { ...beat, day: now.slice(0, 10), lastSeenAt: now });
 }
 
 export function listRecipes(restaurantId: string): Promise<Recipe[]> {

@@ -2,7 +2,8 @@ const TABS = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/kitchen", label: "Kitchen" },
   { href: "/admin/inventory", label: "Inventory" },
-  { href: "/admin/devices", label: "Devices" }
+  { href: "/admin/devices", label: "Devices" },
+  { href: "/admin/channels", label: "Channels" }
 ];
 
 export function AdminTabs({ active, onNavigate }: { active: string; onNavigate: (path: string) => void }) {

@@ -325,3 +325,14 @@ tbody tr:last-child td { border-bottom: 0; }
 .chip.issue-problem { background: hsl(var(--destructive) / 0.12); color: hsl(var(--destructive)); }
 .chip.issue-warning { background: hsl(var(--warning-bg)); color: hsl(var(--warning-fg)); }
 .sim-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 12px; }
+
+/* Channels */
+.channel-cards { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.channel-card strong { font-size: 32px; font-variant-numeric: tabular-nums; }
+.channel-stats { color: hsl(var(--muted-foreground)); display: grid; font-size: 13px; gap: 4px; list-style: none; margin: 8px 0 0; padding: 0; }
+.channel-stats li { align-items: center; display: flex; gap: 6px; }
+.trend { display: block; height: auto; width: 100%; }
+.trend-grid { stroke: hsl(var(--border)); stroke-width: 1; }
+.trend-axis { fill: hsl(var(--muted-foreground)); font-size: 11px; }
+.trend-dot { stroke: hsl(var(--card)); stroke-width: 2; }
+.trend-note { font-size: 12px; margin: 8px 0 0; }
