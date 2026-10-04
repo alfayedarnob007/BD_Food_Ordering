@@ -198,6 +198,14 @@ export async function listOrderItems(orderId: string): Promise<OrderItem[]> {
   return extractItems<OrderItem>(await orderItems.list({ filter: { orderId }, pageNo: 1, pageSize: 100 }));
 }
 
+// Advances an order and stamps the matching timestamp, which is what the
+// kitchen board uses to measure prep time.
+export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
+  const now = new Date().toISOString();
+  const stamp: Partial<Order> = status === "accepted" ? { acceptedAt: now } : status === "ready" ? { readyAt: now } : status === "delivered" ? { deliveredAt: now } : {};
+  await orders.update(orderId, { status, ...stamp });
+}
+
 export async function placeOrder(order: NewOrder, lines: NewOrderItem[]): Promise<string> {
   const created = await orders.create(order);
   const orderId = extractId(created);
@@ -362,4 +370,67 @@ export async function seedSampleOrders(customerId: string): Promise<void> {
 
 export function formatBdt(amount: number): string {
   return `৳${amount.toLocaleString("en-US")}`;
+}
+
+// Dev tool: gives a restaurant two branches if it has none, then adds a spread
+// of orders in every status/channel/age so the kitchen board and dashboard have
+// something to show. Only ever adds records.
+export async function seedKitchenDemo(restaurantId: string, customerId: string): Promise<void> {
+  let branchList = await listBranches(restaurantId);
+  if (branchList.length === 0) {
+    const restaurant = (await listRestaurants()).find((entry) => entry.ItemId === restaurantId);
+    for (const name of [restaurant?.area || "Main branch", "Second branch"]) {
+      await branches.create({ address: restaurant?.address, area: restaurant?.area, city: restaurant?.city, isActive: true, name, openingHours: restaurant?.openingHours, phone: restaurant?.phone, restaurantId, timezone: "Asia/Dhaka" });
+    }
+    branchList = await listBranches(restaurantId);
+  }
+  const menu = (await listMenuItems(restaurantId)).filter((item) => item.isAvailable !== false);
+  if (branchList.length === 0 || menu.length === 0) throw new Error("This restaurant needs at least one menu item before demo orders can be added.");
+
+  const plan: Array<{ channel: Channel; minutesAgo: number; status: OrderStatus }> = [
+    { channel: "kiosk", minutesAgo: 2, status: "placed" },
+    { channel: "webapp", minutesAgo: 7, status: "placed" },
+    { channel: "website", minutesAgo: 9, status: "placed" },
+    { channel: "kiosk", minutesAgo: 14, status: "accepted" },
+    { channel: "webapp", minutesAgo: 10, status: "preparing" },
+    { channel: "kiosk", minutesAgo: 19, status: "preparing" },
+    { channel: "website", minutesAgo: 31, status: "preparing" },
+    { channel: "webapp", minutesAgo: 26, status: "ready" },
+    { channel: "kiosk", minutesAgo: 42, status: "out_for_delivery" },
+    { channel: "webapp", minutesAgo: 75, status: "delivered" },
+    { channel: "kiosk", minutesAgo: 160, status: "delivered" },
+    { channel: "website", minutesAgo: 95, status: "cancelled" }
+  ];
+  const at = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000).toISOString();
+
+  for (const [index, entry] of plan.entries()) {
+    const lines = [0, 1, 2].slice(0, 1 + (index % 3)).map((offset) => {
+      const item = menu[(index + offset) % menu.length] as MenuItem;
+      return { menuItemId: item.ItemId, name: item.name, quantity: 1 + ((index + offset) % 2), unitPrice: item.price };
+    });
+    const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+    const reached = (...states: OrderStatus[]) => states.includes(entry.status);
+    const branch = branchList[index % branchList.length] as Branch;
+    await placeOrder(
+      {
+        acceptedAt: reached("accepted", "preparing", "ready", "out_for_delivery", "delivered") ? at(entry.minutesAgo - 2) : undefined,
+        branchId: branch.ItemId,
+        channel: entry.channel,
+        customerId,
+        deliveredAt: reached("delivered") ? at(Math.max(0, entry.minutesAgo - 40)) : undefined,
+        deliveryAddress: "House 12, Road 5, Dhanmondi, Dhaka",
+        deliveryFee: DELIVERY_FEE_BDT,
+        notes: "",
+        paymentMethod: entry.channel === "kiosk" ? "cod" : "bkash",
+        phone: "01712345678",
+        placedAt: at(entry.minutesAgo),
+        readyAt: reached("ready", "out_for_delivery", "delivered") ? at(Math.max(0, entry.minutesAgo - 20)) : undefined,
+        restaurantId,
+        status: entry.status,
+        subtotal,
+        total: subtotal + DELIVERY_FEE_BDT
+      },
+      lines
+    );
+  }
 }

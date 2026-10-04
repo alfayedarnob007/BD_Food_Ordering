@@ -14,6 +14,8 @@ import { createAssignment, formatBdt, listAllOrderItems, listBranches, listResta
 import type { Channel, Order, StaffAssignment } from "../food/api";
 import { ACTIVE_STATUSES, RANGES, UNASSIGNED, computeMetrics, filterOrders, isActive } from "./metrics";
 import type { RangeKey } from "./metrics";
+import { AdminTabs } from "./AdminTabs";
+import { DemoOrdersButton } from "./DemoOrdersButton";
 import { useStaff } from "./useStaff";
 import type { PageProps } from "../../app/router/routes";
 
@@ -22,7 +24,7 @@ const CHANNEL_LABELS: Record<Channel | "unknown", string> = { kiosk: "Kiosk", un
 const CHANNEL_SERIES: Record<Channel | "unknown", string> = { kiosk: "var(--viz-1)", unknown: "var(--viz-muted)", webapp: "var(--viz-2)", website: "var(--viz-3)" };
 const STATUS_LABELS: Record<string, string> = { accepted: "Accepted", out_for_delivery: "Out for delivery", placed: "Placed", preparing: "Preparing", ready: "Ready" };
 
-export function AdminPage(_props: PageProps) {
+export function AdminPage({ onNavigate }: PageProps) {
   const { assignment, isLoading, userId } = useStaff();
 
   if (isLoading) return <section><PageHeader title="Operations" subtitle="Loading your access..." /><Skeleton className="skeleton-line-lg" /></section>;
@@ -31,11 +33,11 @@ export function AdminPage(_props: PageProps) {
     return (
       <section>
         <PageHeader title="Operations" subtitle="Kitchen staff" />
-        <EmptyState icon={<ShieldCheck size={32} />} title="Kitchen board coming next" description="Your role gives you the kitchen board, not the management dashboard. It arrives in the next phase." />
+        <EmptyState icon={<ShieldCheck size={32} />} title="Your role is the kitchen board" description="Kitchen staff work from the live board, not the management dashboard." action={<ActionButton onClick={() => onNavigate("/admin/kitchen")}>Open kitchen board</ActionButton>} />
       </section>
     );
   }
-  return <Dashboard assignment={assignment} />;
+  return <Dashboard assignment={assignment} onNavigate={onNavigate} />;
 }
 
 // Dev bootstrap: nothing can grant the first admin role from inside the app, so
@@ -75,7 +77,7 @@ function StaffSetup({ userId }: { userId?: string }) {
   );
 }
 
-function Dashboard({ assignment }: { assignment: StaffAssignment }) {
+function Dashboard({ assignment, onNavigate }: { assignment: StaffAssignment; onNavigate: (path: string) => void }) {
   const { restaurantId } = assignment;
   const lockedBranch = assignment.role === "branch-manager" && assignment.branchId ? assignment.branchId : undefined;
   const [range, setRange] = useState<RangeKey>("7d");
@@ -106,6 +108,8 @@ function Dashboard({ assignment }: { assignment: StaffAssignment }) {
         actions={<ActionButton variant="icon" title="Refresh now" onClick={() => { void orders.refetch(); void lines.refetch(); }} icon={<RefreshCw size={18} />} />}
       />
 
+      <AdminTabs active="/admin" onNavigate={onNavigate} />
+
       <div className="toolbar">
         <div className="segmented" role="group" aria-label="Date range">
           {RANGES.map((entry) => (
@@ -135,7 +139,7 @@ function Dashboard({ assignment }: { assignment: StaffAssignment }) {
       </div>
 
       {orders.isSuccess && scoped.length === 0 ? (
-        <EmptyState title="No orders in this view" description={range === "all" ? "Nothing has been ordered yet." : "Try a wider date range or another branch."} />
+        <EmptyState title="No orders in this view" description={range === "all" ? "Nothing has been ordered yet." : "Try a wider date range or another branch."} action={range === "all" ? <DemoOrdersButton restaurantId={restaurantId} /> : undefined} />
       ) : null}
 
       <div className="viz-grid">
@@ -188,6 +192,11 @@ function Dashboard({ assignment }: { assignment: StaffAssignment }) {
           )}
         </div>
       </div>
+
+      <details className="raw-details">
+        <summary>Dev tools</summary>
+        <DemoOrdersButton restaurantId={restaurantId} />
+      </details>
 
       <details className="raw-details">
         <summary>View as table</summary>

@@ -7,6 +7,7 @@ import { ErrorPage } from "../../features/auth/ErrorPage";
 import { LoginPage } from "../../features/auth/LoginPage";
 import { NotFoundPage } from "../../features/auth/NotFoundPage";
 import { AdminPage } from "../../features/admin/AdminPage";
+import { KitchenPage } from "../../features/admin/KitchenPage";
 import { CartPage } from "../../features/cart/CartPage";
 import { OrdersPage } from "../../features/orders/OrdersPage";
 import { ProfilePage } from "../../features/profile/ProfilePage";
@@ -17,6 +18,7 @@ export type PageProps = { onNavigate: (path: string) => void; path: string };
 
 const protectedRoutes: Record<string, ComponentType<PageProps>> = {
   "/admin": AdminPage,
+  "/admin/kitchen": KitchenPage,
   "/": RestaurantsPage,
   "/cart": CartPage,
   "/error": ErrorPage,
@@ -64,7 +66,7 @@ export function AppRouter() {
 
   return (
     <RequireAuth currentPath={path} onNavigate={navigate}>
-      <AppShell activePath={path.startsWith("/restaurants/") ? "/" : path} onNavigate={navigate}>
+      <AppShell activePath={path.startsWith("/restaurants/") ? "/" : path.startsWith("/admin") ? "/admin" : path} onNavigate={navigate}>
         <Page onNavigate={navigate} path={path} />
       </AppShell>
     </RequireAuth>
